@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MagnoTrack - Standalone Mobile Magnetometer & Haptic Detector</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2 family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .code-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Simple custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-4 py-3 md:px-6">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+          <i class="fa-solid fa-waveform text-2xl animate-pulse"></i>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            MagnoTrack <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold uppercase">PWA Ready</span>
+          </h1>
+          <p class="text-xs text-slate-400">Mobile Hardware Sensor & Haptic Feedback Sandbox</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="installGuideBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5 font-medium">
+          <i class="fa-solid fa-mobile-screen"></i>
+          <span>How to Install on Phone</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- LEFT: Interactive Playground (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+      
+      <!-- Simulator / Hardware Live Interface -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="p-4 md:p-5 border-b border-slate-800 bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-microchip text-indigo-400"></i>
+            <h2 class="font-bold text-white">Live Sensor Console</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="hardwareModeBtn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-lg border border-indigo-500/40 shadow-lg shadow-indigo-600/20 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-mobile-screen-button"></i>
+              <span id="hardwareBtnText">Activate Phone Hardware</span>
+            </button>
+            <span class="text-[10px] text-slate-400 bg-slate-950 px-2.5 py-1.5 rounded-md border border-slate-800">
+              Unit: Microtesla (µT)
+            </span>
+          </div>
+        </div>
+
+        <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+          
+          <!-- Virtual Phone Sandbox / Visual Indicator -->
+          <div class="md:col-span-7 bg-slate-950 rounded-xl p-4 border border-slate-800 flex flex-col items-center justify-center relative min-h-[360px] overflow-hidden select-none">
+            <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            
+            <!-- Contextual State Prompt -->
+            <div class="absolute top-2 left-2 text-[10px] text-slate-500 max-w-[220px] pointer-events-none">
+              <i class="fa-solid fa-circle-info text-indigo-400"></i> 
+              <span id="interactiveHint">On desktop? Drag the virtual magnet over the sensor. On phone? Switch to "Phone Hardware".</span>
+            </div>
+
+            <!-- Virtual Phone Chassis -->
+            <div id="virtualPhone" class="w-48 h-80 rounded-[32px] border-4 border-slate-700 bg-slate-900 shadow-2xl relative flex flex-col items-center justify-between p-4 transition-all duration-300">
+              <!-- Speaker & Camera Notch -->
+              <div class="w-20 h-4 bg-slate-950 rounded-full flex items-center justify-center gap-1.5 border border-slate-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
+                <span class="w-8 h-1 bg-slate-800 rounded-full"></span>
+              </div>
+              
+              <!-- Simulated Sensor Target -->
+              <div id="sensorTarget" class="absolute top-20 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-indigo-500/10 border-2 border-dashed border-indigo-500/40 flex flex-col items-center justify-center transition duration-200">
+                <div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                <span class="text-[8px] text-indigo-300 font-bold mt-1 tracking-wider uppercase">Sensor</span>
+              </div>
+
+              <!-- Live Absolute Value Bubble inside phone screen -->
+              <div class="my-auto text-center z-10">
+                <div class="text-slate-500 text-[10px] font-bold uppercase tracking-widest" id="fieldLabel">Simulated Ambient</div>
+                <div id="virtualTotal" class="text-3xl font-extrabold text-white tracking-tight my-1">45.0 <span class="text-sm font-medium text-slate-400">µT</span></div>
+                <div id="virtualStatus" class="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Normal
+                </div>
+              </div>
+
+              <!-- Bottom Bar / Home indicator -->
+              <div class="w-16 h-1 bg-slate-700 rounded-full mb-1"></div>
+            </div>
+
+            <!-- Interactive Magnet (Draggable Element) -->
+            <div id="draggableMagnet" class="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-red-600 via-red-500 to-blue-600 rounded-lg cursor-grab active:cursor-grabbing flex flex-col items-center justify-between p-1.5 shadow-xl hover:scale-105 active:scale-95 transition-transform z-20 select-none touch-none">
+              <span class="text-[10px] text-white font-black leading-none drop-shadow">N</span>
+              <div class="w-full h-0.5 bg-white/20 my-0.5"></div>
+              <span class="text-[10px] text-white font-black leading-none drop-shadow">S</span>
+              <!-- Small icon indicator -->
+              <i class="fa-solid fa-hand-pointer absolute text-white/50 text-[10px] right-1 bottom-1"></i>
+            </div>
+          </div>
+
+          <!-- Real-Time Metrics & Control Panel -->
+          <div class="md:col-span-5 flex flex-col justify-between gap-4">
+            <!-- Numeric Output -->
+            <div class="space-y-3">
+              <h3 class="text-xs font-semibold text-slate-400 tracking-wider uppercase flex items-center gap-1">
+                <i class="fa-solid fa-chart-simple text-slate-500"></i>
+                Channel Matrix
+              </h3>
+              
+              <!-- X Axis -->
+              <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase">X-Axis (Horizontal)</span>
+                  <span id="metricX" class="font-mono text-base font-bold text-red-400">0.00 µT</span>
+                </div>
+                <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div id="barX" class="bg-red-500 h-full" style="width: 50%"></div>
+                </div>
+              </div>
+
+              <!-- Y Axis -->
+              <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase">Y-Axis (Vertical)</span>
+                  <span id="metricY" class="font-mono text-base font-bold text-emerald-400">0.00 µT</span>
+                </div>
+                <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div id="barY" class="bg-emerald-500 h-full" style="width: 50%"></div>
+                </div>
+              </div>
+
+              <!-- Z Axis -->
+              <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase">Z-Axis (Depth)</span>
+                  <span id="metricZ" class="font-mono text-base font-bold text-sky-400">45.00 µT</span>
+                </div>
+                <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div id="barZ" class="bg-sky-500 h-full" style="width: 50%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Standalone Settings / Simulated Noise Adjuster -->
+            <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800 space-y-4">
+              <h4 class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-indigo-400"></i> Settings & Control
+              </h4>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs text-slate-400">
+                  <label for="noiseRange">Filter Smoothing (Simulated Noise)</label>
+                  <span id="noiseVal">2 µT</span>
+                </div>
+                <input type="range" id="noiseRange" min="0" max="15" value="2" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs text-slate-400">
+                  <label for="alarmThreshold">Trigger Threshold</label>
+                  <span id="thresholdVal">150 µT</span>
+                </div>
+                <input type="range" id="alarmThreshold" min="60" max="350" value="150" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Live History Graph Canvas -->
+        <div class="p-4 bg-slate-950/50 border-t border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-400">Signal Oscilloscope (µT vs Time)</span>
+            <span class="text-[10px] text-slate-500 flex items-center gap-1">
+              <span class="w-2 h-0.5 bg-indigo-500 inline-block"></span> Total Vector Length
+            </span>
+          </div>
+          <div class="w-full h-24 bg-slate-950 rounded-lg overflow-hidden border border-slate-800/60">
+            <canvas id="scopeCanvas" class="w-full h-full"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Haptics Dashboard Engine -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white tracking-widest uppercase flex items-center gap-2">
+            <i class="fa-solid fa-circle-nodes text-emerald-400"></i>
+            Haptic Vibration Engine
+          </h3>
+          <div class="flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-md border border-slate-800">
+            <span class="text-[9px] font-bold text-slate-400">Vibration API:</span>
+            <span id="vibrateSupportBadge" class="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase text-amber-400 bg-amber-400/10">Checking...</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Haptic Toggles -->
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <label for="toggleVibration" class="text-xs font-bold text-slate-300 flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-mobile-retro text-emerald-400"></i> Enable Sensor Vibration
+              </label>
+              <input type="checkbox" id="toggleVibration" checked class="sr-only peer">
+              <div onclick="document.getElementById('toggleVibration').click()" class="w-9 h-5 bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 relative cursor-pointer"></div>
+            </div>
+            <p class="text-[11px] text-slate-500">
+              Triggers your phone's physical vibrator when the magnetic field magnitude passes your custom Threshold.
+            </p>
+
+            <div class="pt-2 border-t border-slate-850 space-y-2">
+              <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pulse Engine Style</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button id="stylePulse" class="haptic-style-btn bg-indigo-600 text-white font-semibold text-[10px] py-1.5 rounded-lg border border-indigo-500/30 transition">Single Pulse</button>
+                <button id="styleDouble" class="haptic-style-btn bg-slate-800 text-slate-400 font-semibold text-[10px] py-1.5 rounded-lg border border-slate-700 transition">Double Tap</button>
+                <button id="styleDynamic" class="haptic-style-btn bg-slate-800 text-slate-400 font-semibold text-[10px] py-1.5 rounded-lg border border-slate-700 transition">Proportional</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sandbox Test Panel -->
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between gap-3">
+            <div>
+              <span class="text-xs font-bold text-slate-300 block mb-1">Haptic Engine Test</span>
+              <p class="text-[11px] text-slate-500">
+                Instantly trigger a mock vibration signal directly to your phone's receiver to verify local hardware access.
+              </p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="testHapticBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs py-2 px-3 rounded-lg transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-fingerprint"></i> Test Pulse
+              </button>
+              <button id="testDoubleBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs py-2 px-3 rounded-lg transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-heart-pulse"></i> Test Double
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT: Android Developer Blueprint & PWA Install (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- PWA Installation Steps -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <h3 class="text-sm font-bold text-white tracking-widest uppercase flex items-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-down text-indigo-400"></i>
+          How to Run on Your Mobile Phone
+        </h3>
+        
+        <div class="space-y-3.5 text-xs">
+          <div class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold flex items-center justify-center shrink-0">1</span>
+            <div>
+              <strong class="text-slate-200 block">HTTPS is Mandatory</strong>
+              <p class="text-slate-400 mt-0.5 leading-relaxed">
+                Mobile browsers enforce strict sandboxes. The Web Magnetometer and Vibration APIs only operate under secure origins (<strong>https://</strong>) or <strong>localhost</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold flex items-center justify-center shrink-0">2</span>
+            <div>
+              <strong class="text-slate-200 block">Enable Sensor Flags (Chrome/Android)</strong>
+              <p class="text-slate-400 mt-0.5 leading-relaxed">
+                In Chrome on Android, open a tab to: <code class="bg-slate-950 px-1 py-0.5 rounded text-pink-400 font-mono">chrome://flags/#enable-generic-sensor-extra-classes</code> and set it to <strong>Enabled</strong>, then relaunch Chrome.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold flex items-center justify-center shrink-0">3</span>
+            <div>
+              <strong class="text-slate-200 block">Add to Home Screen (PWA Mode)</strong>
+              <p class="text-slate-400 mt-0.5 leading-relaxed">
+                Tap your browser's options menu (<i class="fa-solid fa-ellipsis-vertical"></i>) and select <strong>"Add to Home Screen"</strong>. This launches MagnoTrack in standalone fullscreen mode without distracting browser bars.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture Explainer Accordion Card -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <h3 class="text-sm font-bold text-white tracking-widest uppercase flex items-center gap-2">
+          <i class="fa-solid fa-atom text-cyan-400"></i>
+          Web API Implementation Code
+        </h3>
+        <p class="text-xs text-slate-400">
+          This single-file app is constructed with the standard Web Generic Sensor standard. Here is the exact JS architecture required to connect hardware magnetometer changes directly with device vibration:
+        </p>
+
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs">
+          <pre class="code-font text-slate-300 overflow-x-auto"><code>// 1. Initializing the Web Magnetometer API
+if ('Magnetometer' in window) {
+  const sensor = new Magnetometer({ frequency: 60 });
+  
+  sensor.addEventListener('reading', () => {
+    // Total scalar field length calculations
+    const mag = Math.sqrt(
+      sensor.x * sensor.x + 
+      sensor.y * sensor.y + 
+      sensor.z * sensor.z
+    );
+
+    // 2. Triggering Physical Haptic Buzz
+    if (mag > threshold && 'vibrate' in navigator) {
+      // Short dynamic feedback pulse
+      navigator.vibrate(100); 
+    }
+  });
+
+  sensor.start();
+}</code></pre>
+        </div>
+
+        <div class="p-3 bg-indigo-950/20 rounded-xl border border-indigo-500/20 text-[11px] text-indigo-300 flex items-start gap-2">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+          <div>
+            <strong>Note on iOS Support:</strong> Apple Safari currently blocks standard Web Generic Sensors due to privacy rules regarding browser tracking vector fingerprints. iOS users can enjoy the high-performance desktop simulator!
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- PWA Installation Modal Guide -->
+  <div id="installModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/30">
+        <h3 class="font-extrabold text-white text-base flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-indigo-400"></i> Web Deployment Guide
+        </h3>
+        <button id="closeModalBtn" class="text-slate-400 hover:text-slate-200 p-1 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-6 space-y-4 text-xs text-slate-300">
+        <p>To run this tool on your physical device, host this <strong>index.html</strong> on any free secure web space (such as GitHub Pages, Vercel, or Netlify).</p>
+        
+        <h4 class="font-bold text-white flex items-center gap-1.5 mt-2">
+          <i class="fa-solid fa-circle-nodes text-indigo-400"></i> Testing without deploying (Local Dev):
+        </h4>
+        <ol class="list-decimal pl-5 space-y-1.5 text-slate-400">
+          <li>Run a local dev server on your computer (e.g., using <code class="bg-slate-950 px-1 py-0.5 rounded text-indigo-300">npx serve</code> or Live Server extension).</li>
+          <li>Find your computer's local IP address (e.g., <code class="bg-slate-950 px-1 py-0.5 rounded text-indigo-300">192.168.1.X</code>).</li>
+          <li>Open that address in Chrome on your mobile phone. (Chrome allows local network HTTP addresses to use Web APIs as secure origins).</li>
+        </ol>
+
+        <div class="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-300">
+          <strong>Pro-Tip:</strong> Once loaded on your phone browser, enable Chrome's "Install" feature to run MagnoTrack like a native system application!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Custom Alert Banner -->
+  <div id="magneticAlert" class="fixed bottom-6 right-6 z-50 bg-red-600/95 text-white font-bold p-4 rounded-xl border border-red-500 shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
+    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+      <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+    </div>
+    <div>
+      <div class="text-xs uppercase opacity-80">Threshold Violated</div>
+      <div id="alertText">Field anomaly detected: 180.5 µT</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-6 px-6 text-center text-xs text-slate-500 bg-slate-950 mt-auto">
+    <p>© 2026 MagnoTrack Engine. Built for hardware exploratory web apps.</p>
+  </footer>
+
+  <!-- Web API & Simulation Engine JavaScript -->
+  <script>
+    // System Dom Reference Elements
+    const virtualPhone = document.getElementById('virtualPhone');
+    const sensorTarget = document.getElementById('sensorTarget');
+    const draggableMagnet = document.getElementById('draggableMagnet');
+    const metricX = document.getElementById('metricX');
+    const metricY = document.getElementById('metricY');
+    const metricZ = document.getElementById('metricZ');
+    const barX = document.getElementById('barX');
+    const barY = document.getElementById('barY');
+    const barZ = document.getElementById('barZ');
+    const virtualTotal = document.getElementById('virtualTotal');
+    const virtualStatus = document.getElementById('virtualStatus');
+    const noiseRange = document.getElementById('noiseRange');
+    const noiseVal = document.getElementById('noiseVal');
+    const alarmThreshold = document.getElementById('alarmThreshold');
+    const thresholdVal = document.getElementById('thresholdVal');
+    const scopeCanvas = document.getElementById('scopeCanvas');
+    const magneticAlert = document.getElementById('magneticAlert');
+    const alertText = document.getElementById('alertText');
+    const hardwareModeBtn = document.getElementById('hardwareModeBtn');
+    const hardwareBtnText = document.getElementById('hardwareBtnText');
+    const interactiveHint = document.getElementById('interactiveHint');
+    const fieldLabel = document.getElementById('fieldLabel');
+
+    // Haptic UI elements
+    const toggleVibration = document.getElementById('toggleVibration');
+    const vibrateSupportBadge = document.getElementById('vibrateSupportBadge');
+    const testHapticBtn = document.getElementById('testHapticBtn');
+    const testDoubleBtn = document.getElementById('testDoubleBtn');
+    const stylePulse = document.getElementById('stylePulse');
+    const styleDouble = document.getElementById('styleDouble');
+    const styleDynamic = document.getElementById('styleDynamic');
+
+    // PWA Modal references
+    const installGuideBtn = document.getElementById('installGuideBtn');
+    const installModal = document.getElementById('installModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    // System variables & states
+    let isDragging = false;
+    let magnetPosition = { x: 260, y: 280 }; // Initial relative coordinate references
+    let realSensorActive = false;
+    let rawSensor = null;
+    let hapticPulseStyle = 'single'; // 'single', 'double', 'dynamic'
+    let lastVibrateTime = 0;
+    const VIBRATE_COOLDOWN = 300; // ms to avoid spamming the hardware vibrator
+    
+    // Ambient default values
+    const EARTH_BASELINE = 45; 
+    let historyData = Array(120).fill(EARTH_BASELINE);
+
+    // Canvas rendering configurations
+    const ctx = scopeCanvas.getContext('2d');
+    
+    function resizeCanvas() {
+      scopeCanvas.width = scopeCanvas.parentElement.clientWidth;
+      scopeCanvas.height = scopeCanvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Check system Vibration API support instantly on startup
+    if ('vibrate' in navigator) {
+      vibrateSupportBadge.textContent = "Supported";
+      vibrateSupportBadge.className = "text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase text-emerald-400 bg-emerald-400/10 border border-emerald-500/20";
+    } else {
+      vibrateSupportBadge.textContent = "Unsupported";
+      vibrateSupportBadge.className = "text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase text-red-400 bg-red-400/10 border border-red-500/20";
+    }
+
+    // Modal Events
+    installGuideBtn.addEventListener('click', () => {
+      installModal.classList.remove('opacity-0', 'pointer-events-none');
+    });
+    closeModalBtn.addEventListener('click', () => {
+      installModal.classList.add('opacity-0', 'pointer-events-none');
+    });
+    installModal.addEventListener('click', (e) => {
+      if (e.target === installModal) {
+        installModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+    });
+
+    // Pulse Style Selectors
+    const pulseStyleBtns = [stylePulse, styleDouble, styleDynamic];
+    function selectPulseStyle(selectedBtn, style) {
+      pulseStyleBtns.forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('bg-slate-800', 'text-slate-400');
+      });
+      selectedBtn.classList.remove('bg-slate-800', 'text-slate-400');
+      selectedBtn.classList.add('bg-indigo-600', 'text-white');
+      hapticPulseStyle = style;
+    }
+    stylePulse.addEventListener('click', () => selectPulseStyle(stylePulse, 'single'));
+    styleDouble.addEventListener('click', () => selectPulseStyle(styleDouble, 'double'));
+    styleDynamic.addEventListener('click', () => selectPulseStyle(styleDynamic, 'dynamic'));
+
+    // Manual test triggers
+    testHapticBtn.addEventListener('click', () => {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(100);
+      } else {
+        triggerMockHapticFeedback();
+      }
+    });
+
+    testDoubleBtn.addEventListener('click', () => {
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 80, 100]); // Vibrate, pause, vibrate
+      } else {
+        triggerMockHapticFeedback(true);
+      }
+    });
+
+    // Visual fallback mock vibration effect (mainly for desktops)
+    function triggerMockHapticFeedback(isDouble = false) {
+      virtualPhone.classList.add('translate-x-1');
+      setTimeout(() => virtualPhone.classList.remove('translate-x-1'), 50);
+      if (isDouble) {
+        setTimeout(() => {
+          virtualPhone.classList.add('-translate-x-1');
+          setTimeout(() => virtualPhone.classList.remove('-translate-x-1'), 50);
+        }, 150);
+      }
+    }
+
+    // Interactive Drag Mechanics
+    const sandbox = draggableMagnet.parentElement;
+
+    function handleDragStart() {
+      isDragging = true;
+      draggableMagnet.classList.remove('transition-transform');
+    }
+
+    function handleDragMove(e) {
+      if (!isDragging || realSensorActive) return;
+
+      const rect = sandbox.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      let relativeX = clientX - rect.left - 32;
+      let relativeY = clientY - rect.top - 32;
+
+      relativeX = Math.max(0, Math.min(rect.width - 64, relativeX));
+      relativeY = Math.max(0, Math.min(rect.height - 64, relativeY));
+
+      draggableMagnet.style.left = `${relativeX}px`;
+      draggableMagnet.style.top = `${relativeY}px`;
+      draggableMagnet.style.bottom = 'auto';
+      draggableMagnet.style.right = 'auto';
+
+      magnetPosition.x = relativeX + 32;
+      magnetPosition.y = relativeY + 32;
+    }
+
+    function handleDragEnd() {
+      isDragging = false;
+      draggableMagnet.classList.add('transition-transform');
+    }
+
+    draggableMagnet.addEventListener('mousedown', handleDragStart);
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('mouseup', handleDragEnd);
+
+    draggableMagnet.addEventListener('touchstart', handleDragStart, { passive: true });
+    window.addEventListener('touchmove', handleDragMove, { passive: false });
+    window.addEventListener('touchend', handleDragEnd);
+
+    // Dynamic Simulated Fields
+    function calculateSimulatedField() {
+      const rect = sandbox.getBoundingClientRect();
+      const sensorRect = sensorTarget.getBoundingClientRect();
+
+      const sensorX = sensorRect.left - rect.left + (sensorRect.width / 2);
+      const sensorY = sensorRect.top - rect.top + (sensorRect.height / 2);
+
+      const dx = magnetPosition.x - sensorX;
+      const dy = magnetPosition.y - sensorY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      const k = 15000;
+      const decayField = k / (distance + 35);
+      
+      const rawNoise = parseFloat(noiseRange.value);
+      const noiseX = (Math.random() - 0.5) * rawNoise;
+      const noiseY = (Math.random() - 0.5) * rawNoise;
+      const noiseZ = (Math.random() - 0.5) * rawNoise;
+
+      let fx = (dx / (distance + 1)) * decayField + noiseX;
+      let fy = (-dy / (distance + 1)) * decayField + noiseY;
+      let fz = (decayField * 0.6) + EARTH_BASELINE + noiseZ;
+
+      return { x: fx, y: fy, z: fz };
+    }
+
+    // Physical Hardware Magnetometer API Handler
+    hardwareModeBtn.addEventListener('click', async () => {
+      if (realSensorActive) {
+        // Stop Active Hardware Streaming
+        realSensorActive = false;
+        hardwareBtnText.textContent = "Activate Phone Hardware";
+        hardwareModeBtn.classList.remove('bg-emerald-600', 'border-emerald-500/40');
+        hardwareModeBtn.classList.add('bg-indigo-600', 'border-indigo-500/40');
+        draggableMagnet.classList.remove('hidden');
+        fieldLabel.textContent = "Simulated Ambient";
+        interactiveHint.textContent = "On desktop? Drag the virtual magnet over the sensor. On phone? Switch to \"Phone Hardware\".";
+        if (rawSensor) {
+          rawSensor.stop();
+        }
+        return;
+      }
+
+      // Check browser availability
+      if ('Magnetometer' in window) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'magnetometer' });
+          if (permission.state === 'denied') {
+            alert('Access to your device magnetometer was blocked. Check site settings and reload.');
+            return;
+          }
+
+          rawSensor = new Magnetometer({ frequency: 60 });
+          rawSensor.addEventListener('reading', () => {
+            let x = rawSensor.x;
+            let y = rawSensor.y;
+            let z = rawSensor.z;
+
+            // Normalize to microteslas (µT) if browser parses values in standard Tesla (T)
+            if (Math.abs(x) < 0.001) {
+              x *= 1000000;
+              y *= 1000000;
+              z *= 1000000;
+            }
+
+            updateMetrics(x, y, z);
+          });
+          
+          rawSensor.addEventListener('error', event => {
+            alert(`Mobile Sensor Interface Error: ${event.error.message}`);
+            realSensorActive = false;
+          });
+
+          rawSensor.start();
+          realSensorActive = true;
+          hardwareBtnText.textContent = "Stream Active";
+          hardwareModeBtn.classList.remove('bg-indigo-600');
+          hardwareModeBtn.classList.add('bg-emerald-600', 'border-emerald-500/40');
+          draggableMagnet.classList.add('hidden'); // Hide simulated magnet
+          fieldLabel.textContent = "Device Sensor Value";
+          interactiveHint.textContent = "Streaming raw physical hardware magnetometer vector streams directly!";
+        } catch (error) {
+          alert('Failed to connect with hardware magnetometer. Ensure you are browsing over HTTPS secure origins.');
+        }
+      } else {
+        alert('Web Magnetometer API is unavailable. To test physical hardware haptics, use the visual test buttons, or load this app on an Android device running Chrome.');
+      }
+    });
+
+    // Signal engine evaluator
+    function updateMetrics(x, y, z) {
+      const mag = Math.sqrt(x * x + y * y + z * z);
+
+      metricX.textContent = `${x.toFixed(2)} µT`;
+      metricY.textContent = `${y.toFixed(2)} µT`;
+      metricZ.textContent = `${z.toFixed(2)} µT`;
+
+      const maxVisualValue = 250;
+      barX.style.width = `${Math.min(100, (Math.abs(x) / maxVisualValue) * 100)}%`;
+      barY.style.width = `${Math.min(100, (Math.abs(y) / maxVisualValue) * 100)}%`;
+      barZ.style.width = `${Math.min(100, (Math.abs(z) / maxVisualValue) * 100)}%`;
+
+      virtualTotal.innerHTML = `${mag.toFixed(1)} <span class="text-sm font-medium text-slate-400">µT</span>`;
+
+      historyData.push(mag);
+      historyData.shift();
+
+      const threshold = parseFloat(alarmThreshold.value);
+      if (mag > threshold) {
+        virtualStatus.textContent = 'Anomaly!';
+        virtualStatus.className = 'inline-block px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse';
+        virtualPhone.style.borderColor = 'rgb(239, 68, 68)';
+        
+        magneticAlert.style.opacity = '1';
+        magneticAlert.style.pointerEvents = 'auto';
+        magneticAlert.classList.remove('translate-y-10');
+        alertText.textContent = `Field anomaly detected: ${mag.toFixed(1)} µT`;
+
+        // Physical Haptic Trigger
+        if (toggleVibration.checked) {
+          const now = Date.now();
+          if (now - lastVibrateTime > VIBRATE_COOLDOWN) {
+            triggerVibrationEngine(mag, threshold);
+            lastVibrateTime = now;
+          }
+        }
+      } else {
+        virtualStatus.textContent = 'Normal';
+        virtualStatus.className = 'inline-block px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        virtualPhone.style.borderColor = 'rgb(51, 65, 85)';
+        
+        magneticAlert.style.opacity = '0';
+        magneticAlert.style.pointerEvents = 'none';
+        magneticAlert.classList.add('translate-y-10');
+      }
+    }
+
+    // Hardware vibration router
+    function triggerVibrationEngine(magnitude, threshold) {
+      if (!('vibrate' in navigator)) {
+        // Desktop mock vibration
+        triggerMockHapticFeedback(hapticPulseStyle === 'double');
+        return;
+      }
+
+      // Check current pulse mode
+      if (hapticPulseStyle === 'single') {
+        navigator.vibrate(120); // Steady strong alert buzz
+      } else if (hapticPulseStyle === 'double') {
+        navigator.vibrate([100, 60, 100]); // Dual dynamic double tap
+      } else if (hapticPulseStyle === 'dynamic') {
+        // Duration increases dynamically based on field intensity over the threshold
+        const duration = Math.min(250, Math.max(50, Math.round((magnitude - threshold) * 1.5)));
+        navigator.vibrate(duration);
+      }
+    }
+
+    // Oscilloscope visual rendering loops
+    function drawGraph() {
+      ctx.clearRect(0, 0, scopeCanvas.width, scopeCanvas.height);
+      
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
+      ctx.lineWidth = 1;
+      const gridCount = 4;
+      for (let i = 1; i < gridCount; i++) {
+        const y = (scopeCanvas.height / gridCount) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(scopeCanvas.width, y);
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#6366f1'; 
+      
+      const step = scopeCanvas.width / (historyData.length - 1);
+      const maxVal = Math.max(300, ...historyData);
+
+      for (let i = 0; i < historyData.length; i++) {
+        const normY = scopeCanvas.height - (historyData[i] / maxVal) * (scopeCanvas.height - 10) - 5;
+        const normX = i * step;
+        
+        if (i === 0) {
+          ctx.moveTo(normX, normY);
+        } else {
+          ctx.lineTo(normX, normY);
+        }
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+      const thresholdNormY = scopeCanvas.height - (parseFloat(alarmThreshold.value) / maxVal) * (scopeCanvas.height - 10) - 5;
+      ctx.moveTo(0, thresholdNormY);
+      ctx.lineTo(scopeCanvas.width, thresholdNormY);
+      ctx.stroke();
+      ctx.setLineDash([]); 
+    }
+
+    // Active Engine Loops
+    function stepSimulation() {
+      if (!realSensorActive) {
+        const fields = calculateSimulatedField();
+        updateMetrics(fields.x, fields.y, fields.z);
+      }
+      
+      drawGraph();
+      requestAnimationFrame(stepSimulation);
+    }
+
+    // Initialize core loops on ready
+    stepSimulation();
+
+    // Dynamically adjust threshold visual display labels on scroll
+    alarmThreshold.addEventListener('input', (e) => {
+      thresholdVal.textContent = `${e.target.value} µT`;
+    });
+  </script>
+</body>
+</html>
