@@ -51,6 +51,10 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <button id="diagnosticsBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5 font-semibold">
+          <i class="fa-solid fa-clipboard-check"></i>
+          <span>Run Hardware Diagnostics</span>
+        </button>
         <button id="installGuideBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5 font-medium">
           <i class="fa-solid fa-mobile-screen"></i>
           <span>How to Install on Phone</span>
@@ -70,7 +74,7 @@
         <div class="p-4 md:p-5 border-b border-slate-800 bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-microchip text-indigo-400"></i>
-            <h2 class="font-bold text-white">Magnetic Sensor Console</h2>
+            <h2 class="font-bold text-white">Gremin Sensor Console</h2>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button id="hardwareModeBtn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-lg border border-indigo-500/40 shadow-lg shadow-indigo-600/20 transition flex items-center gap-1.5">
@@ -388,6 +392,66 @@ if ('Magnetometer' in window) {
     </div>
   </div>
 
+  <!-- Hardware Diagnostics & Troubleshooting Modal -->
+  <div id="diagnosticsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/30">
+        <h3 class="font-extrabold text-white text-base flex items-center gap-2 text-amber-400">
+          <i class="fa-solid fa-clipboard-check"></i> Phone Diagnostics Suite
+        </h3>
+        <button id="closeDiagBtn" class="text-slate-400 hover:text-slate-200 p-1 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-6 space-y-4 text-xs">
+        <p class="text-slate-300">We ran a deep compatibility scan on your device and browser environment. Here is the report:</p>
+        
+        <!-- Diagnostic Items -->
+        <div class="space-y-2.5">
+          <!-- Check 1: HTTPS -->
+          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-lock text-slate-400" id="iconSecure"></i>
+              <span class="text-slate-300 font-medium">Secure Context (HTTPS)</span>
+            </div>
+            <span id="badgeSecure" class="px-2 py-0.5 rounded text-[10px] font-bold">Checking...</span>
+          </div>
+
+          <!-- Check 2: Vibration API -->
+          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-mobile-retro text-slate-400" id="iconVibrate"></i>
+              <span class="text-slate-300 font-medium">Haptic Vibration Engine</span>
+            </div>
+            <span id="badgeVibrate" class="px-2 py-0.5 rounded text-[10px] font-bold">Checking...</span>
+          </div>
+
+          <!-- Check 3: Magnetometer API -->
+          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-compass text-slate-400" id="iconMagClass"></i>
+              <span class="text-slate-300 font-medium">Browser Magnetometer API</span>
+            </div>
+            <span id="badgeMagClass" class="px-2 py-0.5 rounded text-[10px] font-bold">Checking...</span>
+          </div>
+
+          <!-- Check 4: Sensor Hardware Response -->
+          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-microchip text-slate-400" id="iconHardware"></i>
+              <span class="text-slate-300 font-medium">Physical Magnetometer Chip</span>
+            </div>
+            <span id="badgeHardware" class="px-2 py-0.5 rounded text-[10px] font-bold">Checking...</span>
+          </div>
+        </div>
+
+        <!-- Custom Guidance Output based on results -->
+        <div id="diagnosticFeedback" class="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-1.5 hidden">
+          <h4 id="diagTitle" class="font-bold text-white flex items-center gap-1.5"></h4>
+          <p id="diagDesc" class="text-slate-400 leading-relaxed"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Real-time Custom Alert Banner -->
   <div id="magneticAlert" class="fixed bottom-6 right-6 z-50 bg-red-600/95 text-white font-bold p-4 rounded-xl border border-red-500 shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
     <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -439,10 +503,26 @@ if ('Magnetometer' in window) {
     const styleDouble = document.getElementById('styleDouble');
     const styleDynamic = document.getElementById('styleDynamic');
 
-    // PWA Modal references
+    // Modals references
     const installGuideBtn = document.getElementById('installGuideBtn');
     const installModal = document.getElementById('installModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
+    
+    // Diagnostic references
+    const diagnosticsBtn = document.getElementById('diagnosticsBtn');
+    const diagnosticsModal = document.getElementById('diagnosticsModal');
+    const closeDiagBtn = document.getElementById('closeDiagBtn');
+    const badgeSecure = document.getElementById('badgeSecure');
+    const badgeVibrate = document.getElementById('badgeVibrate');
+    const badgeMagClass = document.getElementById('badgeMagClass');
+    const badgeHardware = document.getElementById('badgeHardware');
+    const iconSecure = document.getElementById('iconSecure');
+    const iconVibrate = document.getElementById('iconVibrate');
+    const iconMagClass = document.getElementById('iconMagClass');
+    const iconHardware = document.getElementById('iconHardware');
+    const diagnosticFeedback = document.getElementById('diagnosticFeedback');
+    const diagTitle = document.getElementById('diagTitle');
+    const diagDesc = document.getElementById('diagDesc');
 
     // System variables & states
     let isDragging = false;
@@ -488,6 +568,91 @@ if ('Magnetometer' in window) {
         installModal.classList.add('opacity-0', 'pointer-events-none');
       }
     });
+
+    // Diagnostic Modal Actions
+    diagnosticsBtn.addEventListener('click', runDiagnostics);
+    closeDiagBtn.addEventListener('click', () => {
+      diagnosticsModal.classList.add('opacity-0', 'pointer-events-none');
+    });
+
+    // Diagnostics Engine
+    function runDiagnostics() {
+      diagnosticsModal.classList.remove('opacity-0', 'pointer-events-none');
+      
+      let securePass = window.isSecureContext;
+      let vibratePass = 'vibrate' in navigator;
+      let magClassPass = 'Magnetometer' in window;
+      let hardwarePass = false;
+
+      // Render Secure Context check
+      if (securePass) {
+        badgeSecure.textContent = "PASS";
+        badgeSecure.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        iconSecure.className = "fa-solid fa-lock text-emerald-400";
+      } else {
+        badgeSecure.textContent = "FAIL";
+        badgeSecure.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+        iconSecure.className = "fa-solid fa-lock-open text-red-400";
+      }
+
+      // Render Vibration check
+      if (vibratePass) {
+        badgeVibrate.textContent = "PASS";
+        badgeVibrate.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        iconVibrate.className = "fa-solid fa-mobile-retro text-emerald-400";
+      } else {
+        badgeVibrate.textContent = "FAIL";
+        badgeVibrate.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+        iconVibrate.className = "fa-solid fa-mobile-retro text-red-400";
+      }
+
+      // Render API Class existence
+      if (magClassPass) {
+        badgeMagClass.textContent = "PASS";
+        badgeMagClass.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        iconMagClass.className = "fa-solid fa-compass text-emerald-400";
+      } else {
+        badgeMagClass.textContent = "FAIL";
+        badgeMagClass.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+        iconMagClass.className = "fa-solid fa-compass text-red-400";
+      }
+
+      // Determine feedback guidance copy
+      diagnosticFeedback.classList.remove('hidden');
+
+      if (!securePass) {
+        diagTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Insecure Context Detected`;
+        diagDesc.textContent = "You opened the file over standard HTTP (or directly via local files). Security sandboxes block Chrome from loading physical device sensor frameworks unless the origin is strictly HTTPS. Try uploading this file to GitHub Pages or Netlify and accessing the HTTPS URL on your phone.";
+        badgeHardware.textContent = "BLOCKED";
+        badgeHardware.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+        iconHardware.className = "fa-solid fa-microchip text-slate-500";
+      } else if (!magClassPass) {
+        diagTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> Hardware Sensor Missing`;
+        diagDesc.innerHTML = "Your Chrome browser is secure and fully updated, but reported that the <strong>Magnetometer API is missing</strong> on your phone. <br><br>Many budget devices, including the <strong>Motorola Play series</strong> (e.g., Moto G Play), physically omit the magnetometer/compass chip on the motherboard to lower device costs. Without this chip, the app must run in virtual simulation mode.";
+        badgeHardware.textContent = "ABSENT";
+        badgeHardware.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+        iconHardware.className = "fa-solid fa-microchip text-red-400";
+      } else {
+        // If API exists, run quick sensor start test
+        try {
+          const testSensor = new Magnetometer({ frequency: 1 });
+          testSensor.start();
+          testSensor.stop();
+          badgeHardware.textContent = "READY";
+          badgeHardware.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          iconHardware.className = "fa-solid fa-microchip text-emerald-400";
+          
+          diagTitle.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Hardware Operational!`;
+          diagDesc.textContent = "Excellent! Your browser supports the required APIs and your phone has a physical magnetometer chip. Close this diagnostic, tap 'Activate Phone Hardware' and bring a real magnet close to your phone's receiver!";
+        } catch (e) {
+          badgeHardware.textContent = "FAIL";
+          badgeHardware.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+          iconHardware.className = "fa-solid fa-microchip text-red-400";
+          diagTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Sensor Authorization Blocked`;
+          diagDesc.textContent = "Chrome has the APIs, but system-level permission to access the Motion Sensors was denied. Go to Chrome Settings > Site Settings > Motion Sensors, enable the permission, and reload this page.";
+        }
+      }
+    }
 
     // Pulse Style Selectors
     const pulseStyleBtns = [stylePulse, styleDouble, styleDynamic];
@@ -563,6 +728,7 @@ if ('Magnetometer' in window) {
       magnetPosition.y = relativeY + 32;
     }
 
+    // End drag
     function handleDragEnd() {
       isDragging = false;
       draggableMagnet.classList.add('transition-transform');
@@ -625,7 +791,7 @@ if ('Magnetometer' in window) {
         try {
           const permission = await navigator.permissions.query({ name: 'magnetometer' });
           if (permission.state === 'denied') {
-            alert('Access to your device magnetometer was blocked. Check site settings and reload.');
+            runDiagnostics();
             return;
           }
 
@@ -646,7 +812,7 @@ if ('Magnetometer' in window) {
           });
           
           rawSensor.addEventListener('error', event => {
-            alert(`Mobile Sensor Interface Error: ${event.error.message}`);
+            runDiagnostics();
             realSensorActive = false;
           });
 
@@ -659,10 +825,10 @@ if ('Magnetometer' in window) {
           fieldLabel.textContent = "Device Sensor Value";
           interactiveHint.textContent = "Streaming raw physical hardware magnetometer vector streams directly!";
         } catch (error) {
-          alert('Failed to connect with hardware magnetometer. Ensure you are browsing over HTTPS secure origins.');
+          runDiagnostics();
         }
       } else {
-        alert('Web Magnetometer API is unavailable. To test physical hardware haptics, use the visual test buttons, or load this app on an Android device running Chrome.');
+        runDiagnostics();
       }
     });
 
